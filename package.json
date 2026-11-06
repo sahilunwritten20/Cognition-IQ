@@ -1,0 +1,15 @@
+{
+  "name": "cognition-iq",
+  "private": true,
+  "workspaces": ["server", "client"],
+  "scripts": {
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "lint": "npm run lint -w server && npm run lint -w client",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
+    "test": "npm run test -w server",
+    "build": "npm run build -w server && npm run build -w client",
+    "format": "prettier --write ."
+  },
+  "devDependencies": { "prettier": "^3.3.3" }
+}
