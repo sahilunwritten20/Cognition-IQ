@@ -6,8 +6,10 @@ const valid = {
   CLIENT_ORIGIN: 'http://localhost:5173',
   MONGODB_URI: 'mongodb://localhost:27017/x',
   REDIS_URL: 'redis://localhost:6379',
+  COLLEGE_ID: 'a'.repeat(24),
   ACCESS_TOKEN_SECRET: 'a'.repeat(32),
   REFRESH_TOKEN_SECRET: 'b'.repeat(32),
+  TWO_FACTOR_ENCRYPTION_KEY: 'c'.repeat(64),
 };
 
 describe('parseEnv', () => {
@@ -15,6 +17,7 @@ describe('parseEnv', () => {
     const env = parseEnv(valid);
     expect(env.PORT).toBe(4000);
     expect(env.ACCESS_TOKEN_TTL).toBe('15m');
+    expect(env.REFRESH_TOKEN_TTL_DAYS).toBe(7);
   });
 
   it('rejects short secrets', () => {
@@ -27,6 +30,17 @@ describe('parseEnv', () => {
 
   it('requires secure cookies in production', () => {
     expect(() => parseEnv({ ...valid, NODE_ENV: 'production', COOKIE_SECURE: 'false' })).toThrow(/COOKIE_SECURE/);
+  });
+
+  it('requires an https client origin outside development', () => {
+    const prod = { ...valid, NODE_ENV: 'production', COOKIE_SECURE: 'true' };
+    expect(() => parseEnv({ ...prod, CLIENT_ORIGIN: 'http://app.college.edu' })).toThrow(/CLIENT_ORIGIN/);
+    expect(() => parseEnv({ ...prod, CLIENT_ORIGIN: 'https://app.college.edu' })).not.toThrow();
+  });
+
+  it('rejects a malformed college id and 2FA key', () => {
+    expect(() => parseEnv({ ...valid, COLLEGE_ID: 'nope' })).toThrow(/COLLEGE_ID/);
+    expect(() => parseEnv({ ...valid, TWO_FACTOR_ENCRYPTION_KEY: 'short' })).toThrow(/TWO_FACTOR_ENCRYPTION_KEY/);
   });
 
   it('does not echo secret values in errors', () => {

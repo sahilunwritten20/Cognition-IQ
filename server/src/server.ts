@@ -1,22 +1,41 @@
 import 'dotenv/config';
+import { Types } from 'mongoose';
 import { createApp } from './app';
+import { createLogger } from './common/logger';
+import { RedisCounterStore } from './common/rateLimit';
 import { connectDatabase, disconnectDatabase, isDatabaseReady } from './config/database';
 import { parseEnv } from './config/env';
 import { createRedis, isRedisReady } from './config/redis';
-import { createLogger } from './common/logger';
+import { apiConfigFromEnv, createApiModules } from './modules';
+import { User } from './modules/users/user.model';
 
 async function main() {
   const env = parseEnv(process.env); // throws => process exits (fail fast)
   const logger = createLogger(env.LOG_LEVEL);
 
   await connectDatabase(env.MONGODB_URI);
+  const activeAdmins = await User.countDocuments({
+    collegeId: new Types.ObjectId(env.COLLEGE_ID),
+    role: 'SUPER_ADMIN',
+    status: 'active',
+    deletedAt: null,
+  });
+  if (activeAdmins < 2) {
+    logger.warn(
+      { activeSuperAdmins: activeAdmins },
+      'fewer than 2 active SUPER_ADMIN accounts: create a second one (docs/operations/RUNBOOK-admin-recovery.md)',
+    );
+  }
+
   const redis = createRedis(env.REDIS_URL);
   redis.connect().catch((err) => logger.warn({ err }, 'redis unavailable at startup (degraded)'));
 
+  const modules = createApiModules(apiConfigFromEnv(env), { logger, store: new RedisCounterStore(redis) });
   const app = createApp({
     logger,
     clientOrigin: env.CLIENT_ORIGIN,
     checks: { mongo: isDatabaseReady, redis: () => isRedisReady(redis) },
+    mount: modules.mount,
   });
 
   const server = app.listen(env.PORT, () => logger.info({ port: env.PORT }, 'api listening'));

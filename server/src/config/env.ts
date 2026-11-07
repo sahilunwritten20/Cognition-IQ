@@ -9,15 +9,25 @@ const schema = z
     CLIENT_ORIGIN: z.string().url(),
     MONGODB_URI: z.string().min(1),
     REDIS_URL: z.string().min(1),
+    COLLEGE_ID: z.string().regex(/^[a-f0-9]{24}$/i, 'must be a 24-character hex ObjectId'),
     ACCESS_TOKEN_SECRET: z.string().min(32, 'must be at least 32 characters'),
     REFRESH_TOKEN_SECRET: z.string().min(32, 'must be at least 32 characters'),
     ACCESS_TOKEN_TTL: z.string().default('15m'),
+    REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(7),
+    TWO_FACTOR_ENCRYPTION_KEY: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/i, 'must be 64 hex characters (32 bytes)'),
+    ARGON2_MEMORY_KIB: z.coerce.number().int().min(1024).default(19456),
+    ARGON2_TIME_COST: z.coerce.number().int().min(2).max(10).default(2),
     COOKIE_SECURE: boolString.default('false'),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   })
   .superRefine((e, ctx) => {
     if (e.ACCESS_TOKEN_SECRET === e.REFRESH_TOKEN_SECRET) {
       ctx.addIssue({ code: 'custom', message: 'token secrets must differ', path: ['REFRESH_TOKEN_SECRET'] });
+    }
+    if ((e.NODE_ENV === 'production' || e.NODE_ENV === 'staging') && !e.CLIENT_ORIGIN.startsWith('https://')) {
+      ctx.addIssue({ code: 'custom', message: 'must use https outside development', path: ['CLIENT_ORIGIN'] });
     }
     if ((e.NODE_ENV === 'production' || e.NODE_ENV === 'staging') && !e.COOKIE_SECURE) {
       ctx.addIssue({ code: 'custom', message: 'must be true outside development', path: ['COOKIE_SECURE'] });

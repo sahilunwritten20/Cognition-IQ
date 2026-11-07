@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { ErrorRequestHandler, RequestHandler } from 'express';
+import type { ErrorRequestHandler, NextFunction, Request, RequestHandler, Response } from 'express';
 import { AppError, Errors } from './errors';
 import type { Logger } from './logger';
 
@@ -13,6 +13,19 @@ export const requestId: RequestHandler = (req, res, next) => {
   const incoming = req.header('x-request-id');
   req.id = incoming && /^[\w-]{8,64}$/.test(incoming) ? incoming : randomUUID();
   res.setHeader('x-request-id', req.id);
+  next();
+};
+
+/** Express 4 does not catch rejected promises; this forwards them to the error handler. */
+export const asyncHandler =
+  (fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>): RequestHandler =>
+  (req, res, next) => {
+    fn(req, res, next).catch(next);
+  };
+
+/** Responses on /api/v1 may contain tokens or temporary passwords: never cache them. */
+export const noStore: RequestHandler = (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
   next();
 };
 
