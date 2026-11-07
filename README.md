@@ -1,7 +1,7 @@
 # Cognition IQ
 
 Secure college-wide quiz and exam platform. See the Master Execution Guide v2.0 for the plan.
-Status: **Step 2 - authentication & authorization** (no exam features yet).
+Status: **Step 3a - academic structure** (no exam features yet).
 
 ## Prerequisites
 Node 20+, Docker (for local MongoDB + Redis). The first `npm test` downloads a MongoDB binary
@@ -42,6 +42,10 @@ npm run lint && npm run typecheck && npm test && npm run build
 | Auth (public) | `POST /auth/register`, `/auth/login`, `/auth/2fa/verify`, `/auth/refresh`, `/auth/logout` |
 | Auth (bearer) | `GET /auth/me`, `POST /auth/change-password`, `/auth/2fa/setup`, `/auth/2fa/enable` |
 | Admin (SUPER_ADMIN) | `GET/POST /admin/users`, `POST /admin/users/:id/{approve,reject,deactivate,activate,reset-password,reset-2fa}` |
+
+| Academics reads (SUPER_ADMIN; HOD = own department only) | `GET /academics/{departments,years,classes,divisions,subjects,enrollments,teaching-assignments}` |
+| Academics writes (SUPER_ADMIN) | `POST /academics/{departments,years,classes,divisions,subjects,enrollments,teaching-assignments}`, `PATCH .../:id`, `POST .../:id/archive`, `POST /academics/years/:id/set-current`, `POST /academics/teaching-assignments/:id/revoke`, `PATCH /academics/staff/:id/department` |
+| Teacher | `GET /academics/teaching-assignments/mine` |
 
 Cookie-based endpoints need the header `X-Requested-With: cognition-iq` (CSRF defence).
 Errors use `{ error: { code, message, requestId, details? } }`.

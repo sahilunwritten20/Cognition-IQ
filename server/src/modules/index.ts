@@ -4,6 +4,8 @@ import { createGuards } from '../common/auth';
 import type { Env } from '../config/env';
 import type { Logger } from '../common/logger';
 import type { CounterStore } from '../common/rateLimit';
+import { academicsRouter } from './academics/academics.routes';
+import { AcademicsService } from './academics/academics.service';
 import { AuditService } from './audit/audit.service';
 import { AuthService } from './auth/auth.service';
 import { authRouter } from './auth/auth.routes';
@@ -56,13 +58,15 @@ export function createApiModules(
     now: deps.now,
   });
   const admin = new UserAdminService({ collegeId, passwords, audit });
+  const academics = new AcademicsService(audit);
   const guards = createGuards(tokens);
   const allowedOrigin = new URL(cfg.clientOrigin).origin;
 
   const mount = (v1: Router): void => {
     v1.use('/auth', authRouter(auth, guards, { allowedOrigin, cookieSecure: cfg.cookieSecure, refreshTtlMs }));
     v1.use('/admin', adminRouter(admin, guards));
+    v1.use('/academics', academicsRouter(academics, guards));
   };
 
-  return { mount, passwords, tokens, audit, auth, admin, guards, collegeId };
+  return { mount, passwords, tokens, audit, auth, admin, academics, guards, collegeId };
 }

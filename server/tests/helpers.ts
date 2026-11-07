@@ -5,6 +5,7 @@ import { createApp } from '../src/app';
 import { createLogger } from '../src/common/logger';
 import { MemoryCounterStore } from '../src/common/rateLimit';
 import { createApiModules, type ApiConfig } from '../src/modules';
+import { initAcademicIndexes } from '../src/modules/academics/academics.models';
 import { AuditLog } from '../src/modules/audit/audit.model';
 import { RefreshSession } from '../src/modules/auth/session.model';
 import { User, type Role, type UserDoc, type UserStatus } from '../src/modules/users/user.model';
@@ -18,7 +19,7 @@ export type TestCtx = Awaited<ReturnType<typeof startTestApp>>;
 export async function startTestApp() {
   const mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri());
-  await Promise.all([User.init(), RefreshSession.init(), AuditLog.init()]);
+  await Promise.all([User.init(), RefreshSession.init(), AuditLog.init(), initAcademicIndexes()]);
 
   const cfg: ApiConfig = {
     collegeId: new Types.ObjectId().toString(),
@@ -65,6 +66,7 @@ export async function makeUser(
     password: string;
     mustChangePassword: boolean;
     twoFactorEnabled: boolean;
+    departmentId: Types.ObjectId;
   }> = {},
 ): Promise<{ user: UserDoc; password: string }> {
   const password = o.password ?? 'Correct-Horse-9';
@@ -78,6 +80,7 @@ export async function makeUser(
     status: o.status ?? 'active',
     mustChangePassword: o.mustChangePassword ?? false,
     twoFactor: { enabled: o.twoFactorEnabled ?? false },
+    ...(o.departmentId ? { departmentId: o.departmentId } : {}),
   });
   return { user, password };
 }
