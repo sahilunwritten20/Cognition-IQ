@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
 export const sha256 = (value: string): string => createHash('sha256').update(value).digest('hex');
 
@@ -28,3 +28,7 @@ export function decryptSecret(payload: string, keyHex: string): string {
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(ct), decipher.final()]).toString('utf8');
 }
+
+/** Domain-separated sub-key (64 hex chars) so one master secret never encrypts two different purposes. */
+export const deriveKey = (masterHex: string, label: string): string =>
+  createHmac('sha256', Buffer.from(masterHex, 'hex')).update(label).digest('hex');

@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "main": "dist/server.js",
@@ -10,6 +10,8 @@
     "start": "node dist/server.js",
     "seed:admin": "tsx src/scripts/seed-admin.ts",
     "recover:admin": "tsx src/scripts/recover-admin.ts",
+    "worker": "tsx watch src/worker.ts",
+    "start:worker": "node dist/worker.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

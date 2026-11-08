@@ -39,6 +39,8 @@ async function main() {
   });
 
   const server = app.listen(env.PORT, () => logger.info({ port: env.PORT }, 'api listening'));
+  if (env.IMPORT_WORKER === 'inline') modules.importWorker.start();
+  else logger.info('import worker not started in this process (IMPORT_WORKER=off); run `npm run start:worker`');
 
   let shuttingDown = false;
   const shutdown = (signal: string) => {
@@ -48,6 +50,7 @@ async function main() {
     const force = setTimeout(() => process.exit(1), 25_000);
     force.unref();
     server.close(async () => {
+      await modules.importWorker.stop(); // finish the current batch; unfinished jobs resume after restart
       await Promise.allSettled([disconnectDatabase(), redis.quit()]);
       logger.info('shutdown complete');
       process.exit(0);

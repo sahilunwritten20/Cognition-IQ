@@ -1,7 +1,7 @@
 # Cognition IQ
 
 Secure college-wide quiz and exam platform. See the Master Execution Guide v2.0 for the plan.
-Status: **Step 3a - academic structure** (no exam features yet).
+Status: **Step 3c - import operations** (no exam features yet).
 
 ## Prerequisites
 Node 20+, Docker (for local MongoDB + Redis). The first `npm test` downloads a MongoDB binary
@@ -31,6 +31,14 @@ password? See `docs/operations/RUNBOOK-admin-recovery.md`.
 Serve the client and API from the same site (for example `app.college.edu` and `api.college.edu`) or one
 origin; cookies are `SameSite=Strict`. Outside development use https and `COOKIE_SECURE=true`.
 
+## Importing students
+1. Download the template, fill it (only these columns are accepted: `loginId,name,rollNo,departmentCode,classCode,divisionName`).
+2. Upload it, review the preview and any row errors, then confirm (`skipInvalid=true` imports just the valid rows).
+3. Download the temporary passwords **once** (they are wiped after download or 24 h), hand them out in person.
+Run big imports outside exam windows: in production set `IMPORT_WORKER=off` on the API and run the worker as its own
+process (`npm run start:worker -w server`). Lost a passwords file? Use bulk reissue. Rows auto-delete after
+`IMPORT_RETENTION_DAYS`. Details: `docs/architecture/ADR-003-import-jobs.md`, `docs/operations/RUNBOOK-imports.md`.
+
 ## Checks (same as CI)
 ```bash
 npm run lint && npm run typecheck && npm test && npm run build
@@ -46,6 +54,8 @@ npm run lint && npm run typecheck && npm test && npm run build
 | Academics reads (SUPER_ADMIN; HOD = own department only) | `GET /academics/{departments,years,classes,divisions,subjects,enrollments,teaching-assignments}` |
 | Academics writes (SUPER_ADMIN) | `POST /academics/{departments,years,classes,divisions,subjects,enrollments,teaching-assignments}`, `PATCH .../:id`, `POST .../:id/archive`, `POST /academics/years/:id/set-current`, `POST /academics/teaching-assignments/:id/revoke`, `PATCH /academics/staff/:id/department` |
 | Teacher | `GET /academics/teaching-assignments/mine` |
+
+| Student import (SUPER_ADMIN) | `GET /imports/students/template`, `POST /imports/students` (raw `text/csv` body, optional `?academicYearId=`), `GET /imports`, `GET /imports/:id`, `GET /imports/:id/rows`, `POST /imports/:id/{confirm,retry,cancel}`, `POST /imports/:id/credentials/export` (one-time), `POST /imports/credentials/reissue` (fresh passwords for a set of students) |
 
 Cookie-based endpoints need the header `X-Requested-With: cognition-iq` (CSRF defence).
 Errors use `{ error: { code, message, requestId, details? } }`.

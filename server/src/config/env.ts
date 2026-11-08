@@ -19,6 +19,11 @@ const schema = z
       .regex(/^[a-f0-9]{64}$/i, 'must be 64 hex characters (32 bytes)'),
     ARGON2_MEMORY_KIB: z.coerce.number().int().min(1024).default(19456),
     ARGON2_TIME_COST: z.coerce.number().int().min(2).max(10).default(2),
+    // Where the import worker runs: 'inline' inside this API process (dev), or 'off' when a dedicated
+    // worker process (npm run start:worker) does the work. Large imports hash passwords: CPU heavy.
+    IMPORT_WORKER: z.enum(['inline', 'off']).default('inline'),
+    // Import rows hold names and login IDs. They are deleted automatically this many days after completion (D-06).
+    IMPORT_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
     COOKIE_SECURE: boolString.default('false'),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   })

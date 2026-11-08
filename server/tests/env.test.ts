@@ -38,6 +38,15 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ ...prod, CLIENT_ORIGIN: 'https://app.college.edu' })).not.toThrow();
   });
 
+  it('defaults the import worker to inline and retention to 30 days, and validates both', () => {
+    const env = parseEnv(valid);
+    expect(env.IMPORT_WORKER).toBe('inline');
+    expect(env.IMPORT_RETENTION_DAYS).toBe(30);
+    expect(parseEnv({ ...valid, IMPORT_WORKER: 'off', IMPORT_RETENTION_DAYS: '90' })).toMatchObject({ IMPORT_WORKER: 'off', IMPORT_RETENTION_DAYS: 90 });
+    expect(() => parseEnv({ ...valid, IMPORT_WORKER: 'maybe' })).toThrow(/IMPORT_WORKER/);
+    expect(() => parseEnv({ ...valid, IMPORT_RETENTION_DAYS: '0' })).toThrow(/IMPORT_RETENTION_DAYS/);
+  });
+
   it('rejects a malformed college id and 2FA key', () => {
     expect(() => parseEnv({ ...valid, COLLEGE_ID: 'nope' })).toThrow(/COLLEGE_ID/);
     expect(() => parseEnv({ ...valid, TWO_FACTOR_ENCRYPTION_KEY: 'short' })).toThrow(/TWO_FACTOR_ENCRYPTION_KEY/);
