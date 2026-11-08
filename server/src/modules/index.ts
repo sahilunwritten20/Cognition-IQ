@@ -14,6 +14,8 @@ import { importRouter } from './imports/import.routes';
 import { ImportService } from './imports/import.service';
 import { ImportWorker } from './imports/import.worker';
 import { PasswordService } from './auth/password.service';
+import { questionRouter } from './questions/question.routes';
+import { QuestionService } from './questions/question.service';
 import { TokenService } from './auth/token.service';
 import { adminRouter } from './users/admin.routes';
 import { UserAdminService } from './users/admin.service';
@@ -65,6 +67,7 @@ export function createApiModules(
   });
   const admin = new UserAdminService({ collegeId, passwords, audit });
   const academics = new AcademicsService(audit);
+  const questions = new QuestionService(audit);
   // Temporary import passwords are encrypted with a purpose-specific sub-key, never the master key.
   const credentialKey = deriveKey(cfg.twoFactorEncryptionKey, 'import-credentials-v1');
   const imports = new ImportService({ audit, credentialKey, retentionDays: cfg.importRetentionDays });
@@ -85,7 +88,8 @@ export function createApiModules(
     v1.use('/admin', adminRouter(admin, guards));
     v1.use('/academics', academicsRouter(academics, guards));
     v1.use('/imports', importRouter(imports, guards));
+    v1.use('/questions', questionRouter(questions, guards));
   };
 
-  return { mount, passwords, tokens, audit, auth, admin, academics, imports, importWorker, guards, collegeId };
+  return { mount, passwords, tokens, audit, auth, admin, academics, questions, imports, importWorker, guards, collegeId };
 }

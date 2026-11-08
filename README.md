@@ -1,7 +1,7 @@
 # Cognition IQ
 
 Secure college-wide quiz and exam platform. See the Master Execution Guide v2.0 for the plan.
-Status: **Step 3c - import operations** (no exam features yet).
+Status: **Step 4 - question bank** (no quizzes or exams yet).
 
 ## Prerequisites
 Node 20+, Docker (for local MongoDB + Redis). The first `npm test` downloads a MongoDB binary
@@ -56,6 +56,8 @@ npm run lint && npm run typecheck && npm test && npm run build
 | Teacher | `GET /academics/teaching-assignments/mine` |
 
 | Student import (SUPER_ADMIN) | `GET /imports/students/template`, `POST /imports/students` (raw `text/csv` body, optional `?academicYearId=`), `GET /imports`, `GET /imports/:id`, `GET /imports/:id/rows`, `POST /imports/:id/{confirm,retry,cancel}`, `POST /imports/:id/credentials/export` (one-time), `POST /imports/credentials/reissue` (fresh passwords for a set of students) |
+
+| Question bank (TEACHER; SUPER_ADMIN read-only, audited) | `GET/POST /questions`, `GET /questions/my-subjects`, `GET/PATCH /questions/:id`, `POST /questions/:id/{archive,restore}` |
 
 Cookie-based endpoints need the header `X-Requested-With: cognition-iq` (CSRF defence).
 Errors use `{ error: { code, message, requestId, details? } }`.

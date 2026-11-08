@@ -7,6 +7,7 @@ import { MemoryCounterStore } from '../src/common/rateLimit';
 import { createApiModules, type ApiConfig } from '../src/modules';
 import { initAcademicIndexes } from '../src/modules/academics/academics.models';
 import { initImportIndexes } from '../src/modules/imports/import.models';
+import { initQuestionIndexes } from '../src/modules/questions/question.model';
 import { AuditLog } from '../src/modules/audit/audit.model';
 import { RefreshSession } from '../src/modules/auth/session.model';
 import { User, type Role, type UserDoc, type UserStatus } from '../src/modules/users/user.model';
@@ -20,7 +21,7 @@ export type TestCtx = Awaited<ReturnType<typeof startTestApp>>;
 export async function startTestApp() {
   const mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri());
-  await Promise.all([User.init(), RefreshSession.init(), AuditLog.init(), initAcademicIndexes(), initImportIndexes()]);
+  await Promise.all([User.init(), RefreshSession.init(), AuditLog.init(), initAcademicIndexes(), initImportIndexes(), initQuestionIndexes()]);
 
   const cfg: ApiConfig = {
     collegeId: new Types.ObjectId().toString(),
@@ -128,4 +129,7 @@ export const FORBIDDEN_KEYS = [
   'tokenVersion',
   'refreshToken',
   'correctOptionId',
+  'answerKey',
+  'internalNotes',
+  'grading',
 ];
