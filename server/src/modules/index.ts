@@ -14,6 +14,9 @@ import { importRouter } from './imports/import.routes';
 import { ImportService } from './imports/import.service';
 import { ImportWorker } from './imports/import.worker';
 import { PasswordService } from './auth/password.service';
+import { noAttempts, type AttemptLookup } from './quizzes/quiz.rules';
+import { quizRouter, studentQuizRouter } from './quizzes/quiz.routes';
+import { QuizService } from './quizzes/quiz.service';
 import { questionRouter } from './questions/question.routes';
 import { QuestionService } from './questions/question.service';
 import { TokenService } from './auth/token.service';
@@ -47,7 +50,7 @@ export const apiConfigFromEnv = (env: Env): ApiConfig => ({
 /** Composition root: builds services once and returns a function that mounts routers on /api/v1. */
 export function createApiModules(
   cfg: ApiConfig,
-  deps: { logger: Logger; store: CounterStore; now?: () => number; shouldPause?: () => Promise<boolean> },
+  deps: { logger: Logger; store: CounterStore; now?: () => number; shouldPause?: () => Promise<boolean>; attempts?: AttemptLookup },
 ) {
   const collegeId = new Types.ObjectId(cfg.collegeId);
   const passwords = new PasswordService(cfg.argon2);
@@ -68,6 +71,13 @@ export function createApiModules(
   const admin = new UserAdminService({ collegeId, passwords, audit });
   const academics = new AcademicsService(audit);
   const questions = new QuestionService(audit);
+  const clock = deps.now;
+  const quizzes = new QuizService({
+    audit,
+    codeKey: deriveKey(cfg.twoFactorEncryptionKey, 'quiz-codes-v1'), // access codes are HMAC-hashed with their own sub-key
+    attempts: deps.attempts ?? noAttempts, // the exam engine plugs the real attempt counts in (Steps 7-8)
+    now: clock ? () => new Date(clock()) : undefined,
+  });
   // Temporary import passwords are encrypted with a purpose-specific sub-key, never the master key.
   const credentialKey = deriveKey(cfg.twoFactorEncryptionKey, 'import-credentials-v1');
   const imports = new ImportService({ audit, credentialKey, retentionDays: cfg.importRetentionDays });
@@ -89,7 +99,9 @@ export function createApiModules(
     v1.use('/academics', academicsRouter(academics, guards));
     v1.use('/imports', importRouter(imports, guards));
     v1.use('/questions', questionRouter(questions, guards));
+    v1.use('/quizzes', quizRouter(quizzes, guards));
+    v1.use('/student/quizzes', studentQuizRouter(quizzes, guards));
   };
 
-  return { mount, passwords, tokens, audit, auth, admin, academics, questions, imports, importWorker, guards, collegeId };
+  return { mount, passwords, tokens, audit, auth, admin, academics, questions, quizzes, imports, importWorker, guards, collegeId };
 }

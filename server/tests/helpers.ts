@@ -8,6 +8,8 @@ import { createApiModules, type ApiConfig } from '../src/modules';
 import { initAcademicIndexes } from '../src/modules/academics/academics.models';
 import { initImportIndexes } from '../src/modules/imports/import.models';
 import { initQuestionIndexes } from '../src/modules/questions/question.model';
+import { initQuizIndexes } from '../src/modules/quizzes/quiz.model';
+import type { AttemptLookup } from '../src/modules/quizzes/quiz.rules';
 import { AuditLog } from '../src/modules/audit/audit.model';
 import { RefreshSession } from '../src/modules/auth/session.model';
 import { User, type Role, type UserDoc, type UserStatus } from '../src/modules/users/user.model';
@@ -18,10 +20,10 @@ export const CSRF = { 'X-Requested-With': 'cognition-iq', Origin: CLIENT_ORIGIN 
 
 export type TestCtx = Awaited<ReturnType<typeof startTestApp>>;
 
-export async function startTestApp() {
+export async function startTestApp(opts: { attempts?: AttemptLookup } = {}) {
   const mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri());
-  await Promise.all([User.init(), RefreshSession.init(), AuditLog.init(), initAcademicIndexes(), initImportIndexes(), initQuestionIndexes()]);
+  await Promise.all([User.init(), RefreshSession.init(), AuditLog.init(), initAcademicIndexes(), initImportIndexes(), initQuestionIndexes(), initQuizIndexes()]);
 
   const cfg: ApiConfig = {
     collegeId: new Types.ObjectId().toString(),
@@ -37,7 +39,7 @@ export async function startTestApp() {
   const clock = { now: Date.UTC(2026, 10, 6, 10, 0, 0) };
   const store = new MemoryCounterStore();
   const logger = createLogger('silent');
-  const modules = createApiModules(cfg, { logger, store, now: () => clock.now });
+  const modules = createApiModules(cfg, { logger, store, now: () => clock.now, attempts: opts.attempts });
   const app = createApp({
     logger,
     clientOrigin: CLIENT_ORIGIN,
