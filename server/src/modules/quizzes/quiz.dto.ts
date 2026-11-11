@@ -62,6 +62,7 @@ export function toStudentQuizDto(
   subject: { id: string; code: string; name: string } | null,
   attemptsUsed: number,
   now: Date,
+  activeAttemptId: string | null = null,
 ) {
   const a = evaluateAvailability(q, now, attemptsUsed);
   return {
@@ -75,6 +76,8 @@ export function toStudentQuizDto(
     maxAttempts: q.maxAttempts,
     attemptsUsed,
     attemptsLeft: Math.max(0, q.maxAttempts - attemptsUsed),
+    // A running attempt can be resumed even when `available` is false (paused/closed block NEW starts only).
+    activeAttemptId,
     requiresCode: q.accessMode !== 'scheduled',
     totalMarks: q.totalMarks,
     questionCount: q.items.length,

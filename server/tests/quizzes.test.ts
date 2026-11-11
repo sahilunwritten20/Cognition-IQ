@@ -528,7 +528,7 @@ describe('what students see', () => {
     expect(res.status).toBe(200);
     const item = (res.body.items as Array<Record<string, unknown>>).find((q) => q.id === quiz.id) as Record<string, unknown>;
     expect(Object.keys(item).sort()).toEqual(
-      ['attemptsLeft', 'attemptsUsed', 'available', 'durationMinutes', 'endAt', 'id', 'instructions', 'maxAttempts', 'questionCount', 'reason', 'reasonText', 'requiresCode', 'startAt', 'state', 'subject', 'title', 'totalMarks'].sort(),
+      ['activeAttemptId', 'attemptsLeft', 'attemptsUsed', 'available', 'durationMinutes', 'endAt', 'id', 'instructions', 'maxAttempts', 'questionCount', 'reason', 'reasonText', 'requiresCode', 'startAt', 'state', 'subject', 'title', 'totalMarks'].sort(),
     );
     expect(item).toMatchObject({ requiresCode: true, questionCount: 3, totalMarks: 4.5, durationMinutes: 60 });
     const keys = collectKeys(item); // the quiz object itself (the page wrapper legitimately has an `items` key)

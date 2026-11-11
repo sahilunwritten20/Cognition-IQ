@@ -6,6 +6,7 @@ import { createLogger } from '../src/common/logger';
 import { MemoryCounterStore } from '../src/common/rateLimit';
 import { createApiModules, type ApiConfig } from '../src/modules';
 import { initAcademicIndexes } from '../src/modules/academics/academics.models';
+import { initAttemptIndexes } from '../src/modules/attempts/attempt.model';
 import { initImportIndexes } from '../src/modules/imports/import.models';
 import { initQuestionIndexes } from '../src/modules/questions/question.model';
 import { initQuizIndexes } from '../src/modules/quizzes/quiz.model';
@@ -23,7 +24,7 @@ export type TestCtx = Awaited<ReturnType<typeof startTestApp>>;
 export async function startTestApp(opts: { attempts?: AttemptLookup } = {}) {
   const mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri());
-  await Promise.all([User.init(), RefreshSession.init(), AuditLog.init(), initAcademicIndexes(), initImportIndexes(), initQuestionIndexes(), initQuizIndexes()]);
+  await Promise.all([User.init(), RefreshSession.init(), AuditLog.init(), initAcademicIndexes(), initImportIndexes(), initQuestionIndexes(), initQuizIndexes(), initAttemptIndexes()]);
 
   const cfg: ApiConfig = {
     collegeId: new Types.ObjectId().toString(),
@@ -35,6 +36,7 @@ export async function startTestApp(opts: { attempts?: AttemptLookup } = {}) {
     cookieSecure: false,
     clientOrigin: CLIENT_ORIGIN,
     importRetentionDays: 30,
+    examGraceSeconds: 15,
   };
   const clock = { now: Date.UTC(2026, 10, 6, 10, 0, 0) };
   const store = new MemoryCounterStore();

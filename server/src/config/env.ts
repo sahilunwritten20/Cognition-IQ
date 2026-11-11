@@ -24,6 +24,10 @@ const schema = z
     IMPORT_WORKER: z.enum(['inline', 'off']).default('inline'),
     // Import rows hold names and login IDs. They are deleted automatically this many days after completion (D-06).
     IMPORT_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+    // D-12 (PROPOSED): the server still accepts autosaves/submits up to endsAt + this many seconds (network delay tolerance).
+    EXAM_GRACE_SECONDS: z.coerce.number().int().min(0).max(120).default(15),
+    // Deadline sweeper: 'inline' runs it inside this API process; 'off' when a dedicated worker process runs it.
+    SWEEPER: z.enum(['inline', 'off']).default('inline'),
     COOKIE_SECURE: boolString.default('false'),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   })

@@ -7,6 +7,10 @@ import type { Logger } from '../common/logger';
 import type { CounterStore } from '../common/rateLimit';
 import { academicsRouter } from './academics/academics.routes';
 import { AcademicsService } from './academics/academics.service';
+import { AttemptService } from './attempts/attempt.service';
+import { createAttemptLookup } from './attempts/attempt.lookup';
+import { studentExamRouter } from './attempts/attempt.routes';
+import { AttemptSweeper } from './attempts/attempt.sweeper';
 import { AuditService } from './audit/audit.service';
 import { AuthService } from './auth/auth.service';
 import { authRouter } from './auth/auth.routes';
@@ -14,7 +18,7 @@ import { importRouter } from './imports/import.routes';
 import { ImportService } from './imports/import.service';
 import { ImportWorker } from './imports/import.worker';
 import { PasswordService } from './auth/password.service';
-import { noAttempts, type AttemptLookup } from './quizzes/quiz.rules';
+import type { AttemptLookup } from './quizzes/quiz.rules';
 import { quizRouter, studentQuizRouter } from './quizzes/quiz.routes';
 import { QuizService } from './quizzes/quiz.service';
 import { questionRouter } from './questions/question.routes';
@@ -33,6 +37,7 @@ export interface ApiConfig {
   cookieSecure: boolean;
   clientOrigin: string;
   importRetentionDays: number;
+  examGraceSeconds: number;
 }
 
 export const apiConfigFromEnv = (env: Env): ApiConfig => ({
@@ -45,6 +50,7 @@ export const apiConfigFromEnv = (env: Env): ApiConfig => ({
   cookieSecure: env.COOKIE_SECURE,
   clientOrigin: env.CLIENT_ORIGIN,
   importRetentionDays: env.IMPORT_RETENTION_DAYS,
+  examGraceSeconds: env.EXAM_GRACE_SECONDS,
 });
 
 /** Composition root: builds services once and returns a function that mounts routers on /api/v1. */
@@ -72,12 +78,22 @@ export function createApiModules(
   const academics = new AcademicsService(audit);
   const questions = new QuestionService(audit);
   const clock = deps.now;
+  const now = clock ? () => new Date(clock()) : undefined;
+  const quizCodeKey = deriveKey(cfg.twoFactorEncryptionKey, 'quiz-codes-v1'); // access codes are HMAC-hashed with their own sub-key
+  const attempts = new AttemptService({
+    store: deps.store,
+    codeKey: quizCodeKey,
+    graceMs: cfg.examGraceSeconds * 1000,
+    logger: deps.logger,
+    now,
+  });
   const quizzes = new QuizService({
     audit,
-    codeKey: deriveKey(cfg.twoFactorEncryptionKey, 'quiz-codes-v1'), // access codes are HMAC-hashed with their own sub-key
-    attempts: deps.attempts ?? noAttempts, // the exam engine plugs the real attempt counts in (Steps 7-8)
-    now: clock ? () => new Date(clock()) : undefined,
+    codeKey: quizCodeKey,
+    attempts: deps.attempts ?? createAttemptLookup(),
+    now,
   });
+  const sweeper = new AttemptSweeper({ attempts, logger: deps.logger, now });
   // Temporary import passwords are encrypted with a purpose-specific sub-key, never the master key.
   const credentialKey = deriveKey(cfg.twoFactorEncryptionKey, 'import-credentials-v1');
   const imports = new ImportService({ audit, credentialKey, retentionDays: cfg.importRetentionDays });
@@ -88,7 +104,8 @@ export function createApiModules(
     credentialKey,
     logger: deps.logger,
     retentionDays: cfg.importRetentionDays,
-    shouldPause: deps.shouldPause, // the exam engine passes "is an exam window open?" here (Steps 6-7)
+    // Imports hash passwords (CPU heavy): they wait while any exam is running or open.
+    shouldPause: deps.shouldPause ?? (() => attempts.examWindowOpen()),
   });
   const guards = createGuards(tokens);
   const allowedOrigin = new URL(cfg.clientOrigin).origin;
@@ -101,7 +118,8 @@ export function createApiModules(
     v1.use('/questions', questionRouter(questions, guards));
     v1.use('/quizzes', quizRouter(quizzes, guards));
     v1.use('/student/quizzes', studentQuizRouter(quizzes, guards));
+    v1.use('/student', studentExamRouter(attempts, guards));
   };
 
-  return { mount, passwords, tokens, audit, auth, admin, academics, questions, quizzes, imports, importWorker, guards, collegeId };
+  return { mount, passwords, tokens, audit, auth, admin, academics, questions, quizzes, attempts, sweeper, imports, importWorker, guards, collegeId };
 }

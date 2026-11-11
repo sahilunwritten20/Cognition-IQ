@@ -55,14 +55,16 @@ export function evaluateAvailability(
 }
 
 /**
- * Hook to the exam engine. Until attempts exist (Steps 7-8) the default reports none; the engine then
- * provides the real implementation so these rules start counting finished attempts automatically.
+ * Hook between quizzes and the exam engine. The real implementation (attempts/attempt.lookup.ts) is wired in the composition
+ * root; this default (no attempts) exists for tests and for code that runs without the exam engine.
  */
 export interface AttemptLookup {
   /** Finalized attempts (submitted / auto_submitted) per quiz id, for one student. */
   countsForStudent(studentId: string, quizIds: string[]): Promise<Map<string, number>>;
   /** True if any attempt exists for the quiz (blocks unpublishing). */
   quizHasAttempts(quizId: string): Promise<boolean>;
+  /** quizId -> id of the student's attempt that is still in progress (so the UI can offer "Resume"). */
+  activeAttemptIds?(studentId: string, quizIds: string[]): Promise<Map<string, string>>;
 }
 export const noAttempts: AttemptLookup = {
   countsForStudent: async () => new Map(),

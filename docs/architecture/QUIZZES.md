@@ -49,7 +49,9 @@ Published or paused quizzes for the student's own enrollment (class+division in 
 readable reason (`not_started`, `ended`, `paused`, `no_attempts_left`...). Never listed: drafts, closed quizzes, quizzes that ended
 over 24 hours ago, other classes' quizzes. The DTO is an explicit allow-list (no question ids, code, teacher or department ids).
 
-## Hooks left for later steps
-- `AttemptLookup` (counts finished attempts; says whether any attempt exists): returns "none" until Step 7 supplies the real one.
-- Result publication (`resultsPublishedAt`, `resultVisibility`) is stored and shown; the publish-results action arrives with grading (Step 9).
-- Pausing/closing does not finalize running attempts; emergency close and extend are part of the live monitor (Step 10).
+## Hooks to the exam engine (Step 6)
+- `AttemptLookup` is now backed by the real attempts: finished attempts count against `maxAttempts`, a running attempt shows as
+  `activeAttemptId` in the student's list (so the UI can offer "Resume", even when the quiz is paused), and unpublishing is refused
+  once any attempt exists.
+- Result publication (`resultsPublishedAt`, `resultVisibility`) is stored and shown; the publish-results action arrives with the results step.
+- Pausing/closing does not finalize running attempts; emergency close and extend belong to the live monitor.

@@ -193,9 +193,11 @@ export class QuizService {
       Quiz.countDocuments(filter),
     ]);
     const refs = await this.refsFor(docs);
-    const used = await this.d.attempts.countsForStudent(actor.userId, docs.map((d) => d.id as string));
+    const ids = docs.map((d) => d.id as string);
+    const used = await this.d.attempts.countsForStudent(actor.userId, ids);
+    const active = (await this.d.attempts.activeAttemptIds?.(actor.userId, ids)) ?? new Map<string, string>();
     return {
-      items: docs.map((d) => toStudentQuizDto(d, refs.subjects.get(d.subjectId.toString()) ?? null, used.get(d.id as string) ?? 0, now)),
+      items: docs.map((d) => toStudentQuizDto(d, refs.subjects.get(d.subjectId.toString()) ?? null, used.get(d.id as string) ?? 0, now, active.get(d.id as string) ?? null)),
       page: q.page,
       pageSize: q.pageSize,
       total,

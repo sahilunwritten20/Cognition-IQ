@@ -47,6 +47,16 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ ...valid, IMPORT_RETENTION_DAYS: '0' })).toThrow(/IMPORT_RETENTION_DAYS/);
   });
 
+  it('defaults the exam grace to 15 s and the sweeper to inline, and validates both', () => {
+    const env = parseEnv(valid);
+    expect(env.EXAM_GRACE_SECONDS).toBe(15);
+    expect(env.SWEEPER).toBe('inline');
+    expect(parseEnv({ ...valid, EXAM_GRACE_SECONDS: '0', SWEEPER: 'off' })).toMatchObject({ EXAM_GRACE_SECONDS: 0, SWEEPER: 'off' });
+    expect(() => parseEnv({ ...valid, EXAM_GRACE_SECONDS: '-1' })).toThrow(/EXAM_GRACE_SECONDS/);
+    expect(() => parseEnv({ ...valid, EXAM_GRACE_SECONDS: '121' })).toThrow(/EXAM_GRACE_SECONDS/);
+    expect(() => parseEnv({ ...valid, SWEEPER: 'sometimes' })).toThrow(/SWEEPER/);
+  });
+
   it('rejects a malformed college id and 2FA key', () => {
     expect(() => parseEnv({ ...valid, COLLEGE_ID: 'nope' })).toThrow(/COLLEGE_ID/);
     expect(() => parseEnv({ ...valid, TWO_FACTOR_ENCRYPTION_KEY: 'short' })).toThrow(/TWO_FACTOR_ENCRYPTION_KEY/);

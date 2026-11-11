@@ -1,7 +1,7 @@
 # Cognition IQ
 
 Secure college-wide quiz and exam platform. See the Master Execution Guide v2.0 for the plan.
-Status: **Step 5 - quiz builder** (no exam taking yet).
+Status: **Step 6 - exam engine** (students can take and submit quizzes; teacher results come next).
 
 ## Prerequisites
 Node 20+, Docker (for local MongoDB + Redis). The first `npm test` downloads a MongoDB binary
@@ -39,6 +39,11 @@ Run big imports outside exam windows: in production set `IMPORT_WORKER=off` on t
 process (`npm run start:worker -w server`). Lost a passwords file? Use bulk reissue. Rows auto-delete after
 `IMPORT_RETENTION_DAYS`. Details: `docs/architecture/ADR-003-import-jobs.md`, `docs/operations/RUNBOOK-imports.md`.
 
+## Exam engine
+Design, error codes and the client contract: `docs/architecture/EXAM_ENGINE.md`. Settings: `EXAM_GRACE_SECONDS` (default 15) and `SWEEPER`
+(`inline` or `off`). In production run `npm run start:worker -w server` (import worker + deadline sweeper) and set `IMPORT_WORKER=off`, `SWEEPER=off`
+on the API. Imports automatically wait while an exam is running.
+
 ## Checks (same as CI)
 ```bash
 npm run lint && npm run typecheck && npm test && npm run build
@@ -61,6 +66,8 @@ npm run lint && npm run typecheck && npm test && npm run build
 
 | Quizzes (TEACHER own; HOD and SUPER_ADMIN read-only) | `GET/POST /quizzes`, `GET/PATCH /quizzes/:id`, `GET /quizzes/:id/eligible-students`, `POST /quizzes/:id/{publish,unpublish,pause,resume,close,code/regenerate}` |
 | Student | `GET /student/quizzes` (eligible quizzes with availability and reasons) |
+
+| Exam engine (STUDENT) | `POST /student/quizzes/:id/start`, `GET /student/attempts/:id`, `PUT /student/attempts/:id/answers` (cumulative autosave), `POST /student/attempts/:id/submit` |
 
 Cookie-based endpoints need the header `X-Requested-With: cognition-iq` (CSRF defence).
 Errors use `{ error: { code, message, requestId, details? } }`.

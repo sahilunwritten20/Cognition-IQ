@@ -19,7 +19,8 @@ async function main() {
   // The worker needs no Redis: the (unused here) rate-limit store is a throwaway in-memory one.
   const modules = createApiModules(apiConfigFromEnv(env), { logger, store: new MemoryCounterStore() });
   modules.importWorker.start();
-  logger.info('import worker started (dedicated process)');
+  modules.sweeper.start(); // finalizes attempts of students who left; a database lease keeps it to one run per round
+  logger.info('import worker and deadline sweeper started (dedicated process)');
 
   let stopping = false;
   const shutdown = async (signal: string) => {
@@ -28,6 +29,7 @@ async function main() {
     logger.info({ signal }, 'stopping worker: finishing the current batch');
     const force = setTimeout(() => process.exit(1), 25_000);
     force.unref();
+    await modules.sweeper.stop();
     await modules.importWorker.stop(); // an unfinished job resumes after its lease expires
     await disconnectDatabase();
     process.exit(0);
