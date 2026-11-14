@@ -37,6 +37,7 @@ export async function startTestApp(opts: { attempts?: AttemptLookup } = {}) {
     clientOrigin: CLIENT_ORIGIN,
     importRetentionDays: 30,
     examGraceSeconds: 15,
+    displayTimeZone: 'Asia/Kolkata',
   };
   const clock = { now: Date.UTC(2026, 10, 6, 10, 0, 0) };
   const store = new MemoryCounterStore();

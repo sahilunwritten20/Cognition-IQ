@@ -40,6 +40,10 @@ export function toQuizDto(q: QuizDoc, refs: QuizRefs, actorId: string, now: Date
     ...(extras.accessCode ? { accessCode: extras.accessCode } : {}),
     resultVisibility: q.resultVisibility,
     resultsPublished: Boolean(q.resultsPublishedAt),
+    resultsPublishedAt: iso(q.resultsPublishedAt),
+    passMarks: q.passMarks ?? null,
+    gradingRevision: q.gradingRevision,
+    correctionCount: q.corrections.length,
     status: q.status,
     state: displayState(q, now), // draft | scheduled | live | ended | paused | closed (derived)
     statusReason: q.statusReason ?? null,

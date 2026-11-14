@@ -1,7 +1,7 @@
 # Cognition IQ
 
 Secure college-wide quiz and exam platform. See the Master Execution Guide v2.0 for the plan.
-Status: **Step 6 - exam engine** (students can take and submit quizzes; teacher results come next).
+Status: **Step 7 - results** (teachers see results, publish, regrade; students see released results).
 
 ## Prerequisites
 Node 20+, Docker (for local MongoDB + Redis). The first `npm test` downloads a MongoDB binary
@@ -44,6 +44,10 @@ Design, error codes and the client contract: `docs/architecture/EXAM_ENGINE.md`.
 (`inline` or `off`). In production run `npm run start:worker -w server` (import worker + deadline sweeper) and set `IMPORT_WORKER=off`, `SWEEPER=off`
 on the API. Imports automatically wait while an exam is running.
 
+## Results
+Roster table, CSV, publication rules, the audited regrade and what students see: `docs/architecture/RESULTS.md`.
+Setting: `DISPLAY_TIMEZONE` (default Asia/Kolkata) for CSV times; stored times stay UTC.
+
 ## Checks (same as CI)
 ```bash
 npm run lint && npm run typecheck && npm test && npm run build
@@ -68,6 +72,10 @@ npm run lint && npm run typecheck && npm test && npm run build
 | Student | `GET /student/quizzes` (eligible quizzes with availability and reasons) |
 
 | Exam engine (STUDENT) | `POST /student/quizzes/:id/start`, `GET /student/attempts/:id`, `PUT /student/attempts/:id/answers` (cumulative autosave), `POST /student/attempts/:id/submit` |
+
+| Results (TEACHER own; HOD/SUPER_ADMIN read-only) | `GET /quizzes/:id/results`, `GET /quizzes/:id/results/export` (CSV) |
+| Results actions (TEACHER own) | `POST /quizzes/:id/{finalize-expired,results/publish,results/unpublish,results/visibility,regrade,regrade/resume}`, `GET /quizzes/:id/attempts/:attemptId` |
+| Released results (STUDENT) | `GET /student/results`, `GET /student/quizzes/:id/result` |
 
 Cookie-based endpoints need the header `X-Requested-With: cognition-iq` (CSRF defence).
 Errors use `{ error: { code, message, requestId, details? } }`.

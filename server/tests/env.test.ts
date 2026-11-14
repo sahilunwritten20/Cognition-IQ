@@ -57,6 +57,12 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ ...valid, SWEEPER: 'sometimes' })).toThrow(/SWEEPER/);
   });
 
+  it('defaults the display time zone to Asia/Kolkata and rejects an unknown one', () => {
+    expect(parseEnv(valid).DISPLAY_TIMEZONE).toBe('Asia/Kolkata');
+    expect(parseEnv({ ...valid, DISPLAY_TIMEZONE: 'UTC' }).DISPLAY_TIMEZONE).toBe('UTC');
+    expect(() => parseEnv({ ...valid, DISPLAY_TIMEZONE: 'Mars/Olympus' })).toThrow(/DISPLAY_TIMEZONE/);
+  });
+
   it('rejects a malformed college id and 2FA key', () => {
     expect(() => parseEnv({ ...valid, COLLEGE_ID: 'nope' })).toThrow(/COLLEGE_ID/);
     expect(() => parseEnv({ ...valid, TWO_FACTOR_ENCRYPTION_KEY: 'short' })).toThrow(/TWO_FACTOR_ENCRYPTION_KEY/);

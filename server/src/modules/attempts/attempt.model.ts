@@ -38,6 +38,16 @@ export interface IGradedItem {
   awarded: number;
   answered: boolean;
   correct: boolean;
+  adjusted: boolean; // a quiz-level correction changed this question's outcome
+}
+
+/** A previous grading, kept when a regrade replaces it (both the original and the corrected grade stay on record). */
+export interface IGradingHistory {
+  revision: number;
+  quizRevision: number;
+  score: number;
+  totalMarks: number;
+  gradedAt: Date;
 }
 
 export interface IAttempt {
@@ -67,9 +77,11 @@ export interface IAttempt {
     status: GradingStatus;
     score?: number;
     totalMarks?: number;
-    revision: number;
+    revision: number; // this attempt's grading revision: 1 = first grade, +1 per regrade that touched it
+    quizRevision?: number; // the quiz correction revision it was graded against
     gradedAt?: Date;
     items?: IGradedItem[];
+    history?: IGradingHistory[];
   };
   createdAt: Date;
   updatedAt: Date;
@@ -99,7 +111,11 @@ const extensionSchema = new Schema<IAttemptExtension>(
   { _id: false },
 );
 const gradedItemSchema = new Schema<IGradedItem>(
-  { questionId: { type: Schema.Types.ObjectId, required: true }, awarded: Number, answered: Boolean, correct: Boolean },
+  { questionId: { type: Schema.Types.ObjectId, required: true }, awarded: Number, answered: Boolean, correct: Boolean, adjusted: Boolean },
+  { _id: false },
+);
+const historySchema = new Schema<IGradingHistory>(
+  { revision: Number, quizRevision: Number, score: Number, totalMarks: Number, gradedAt: Date },
   { _id: false },
 );
 
@@ -130,7 +146,9 @@ const attemptSchema = new Schema<IAttempt>(
       totalMarks: Number,
       revision: { type: Number, required: true, default: 0 },
       gradedAt: Date,
+      quizRevision: Number,
       items: { type: [gradedItemSchema], default: undefined },
+      history: { type: [historySchema], default: undefined },
     },
   },
   { timestamps: true, minimize: false }, // minimize:false keeps an empty `answers` object

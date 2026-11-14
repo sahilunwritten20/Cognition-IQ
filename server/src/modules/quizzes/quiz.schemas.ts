@@ -37,6 +37,7 @@ export const createQuizBody = z
     endAt: isoDate.optional(),
     durationMinutes: duration.optional(),
     maxAttempts: attempts.default(1),
+    passMarks: marks.optional(), // optional per quiz (D-04); checked against the total at publish time
     accessMode: z.enum(ACCESS_MODES).default('scheduled'),
     resultVisibility: z.enum(RESULT_VISIBILITIES).default('hidden'),
   })
@@ -56,6 +57,7 @@ export const updateQuizBody = z
     endAt: isoDate.nullable().optional(),
     durationMinutes: duration.nullable().optional(),
     maxAttempts: attempts.optional(),
+    passMarks: marks.nullable().optional(), // null clears it
     accessMode: z.enum(ACCESS_MODES).optional(),
     resultVisibility: z.enum(RESULT_VISIBILITIES).optional(),
   })

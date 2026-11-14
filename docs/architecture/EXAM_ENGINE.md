@@ -54,9 +54,9 @@ is display-only: sync it to `serverNow` and `attempt.endsAt` on every response.
 ## Grading (T-03, D-04 PROPOSED)
 Objective grading runs inside finalization, from the attempt's own snapshot: correct = the quiz's marks for that question, otherwise 0;
 no negative marking, no grace marks, total rounded half-up to 2 decimals. `grading` = `{ status, score, totalMarks, revision, items }`
-and stays on the server: **students receive no score** from these endpoints until results are published (next step).
+and stays on the server: **students receive no score** from these endpoints. Scores reach a student only through the released-results
+endpoints (`docs/architecture/RESULTS.md`), after the teacher publishes. Grading always applies the quiz's audited key corrections.
 `grading.status`: `pending -> done` (or `failed`, logged, retried by regrade).
 
 ## Not in this step
-Teacher results, publishing, CSV export, regrade (next step); live monitor, extend/reopen/emergency close (after that);
-per-student shuffle (R2).
+Live monitor, extend time, reopen attempt and emergency close (next); per-student shuffle (R2).

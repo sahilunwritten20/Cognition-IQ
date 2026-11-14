@@ -19,6 +19,21 @@ export interface IQuizTarget {
   divisionId: Types.ObjectId;
 }
 
+/** One audited answer-key correction (guide Runbook B). Corrections live on the quiz and are applied on top of every attempt's own key. */
+export interface IQuizCorrectionChange {
+  questionId: Types.ObjectId;
+  action: 'set_key' | 'award_all';
+  correctOptionId?: string;
+}
+export interface IQuizCorrection {
+  revision: number;
+  at: Date;
+  by: Types.ObjectId;
+  reason: string;
+  approvedBy?: string; // required once results are published (D-05)
+  changes: IQuizCorrectionChange[];
+}
+
 export interface IQuiz {
   collegeId: Types.ObjectId;
   departmentId: Types.ObjectId; // derived from the teaching assignments, never from the client
@@ -39,7 +54,12 @@ export interface IQuiz {
   codeHash?: string;
   codeSetAt?: Date;
   resultVisibility: ResultVisibility; // D-01: hidden by default
-  resultsPublishedAt?: Date; // null until a teacher publishes results (Step 9)
+  resultsPublishedAt?: Date; // unset until a teacher publishes results
+  resultsPublishedBy?: Types.ObjectId;
+  passMarks?: number; // optional per quiz (D-04); the pass mark itself passes
+  /** Number of the latest correction. Each graded attempt records which revision it was graded against. */
+  gradingRevision: number;
+  corrections: IQuizCorrection[];
   status: QuizStatus;
   revision: number;
   publishedAt?: Date;
@@ -57,6 +77,25 @@ const itemSchema = new Schema<IQuizItem>(
   { _id: false },
 );
 const targetSchema = new Schema<IQuizTarget>({ classId: ref(), divisionId: ref() }, { _id: false });
+const correctionSchema = new Schema<IQuizCorrection>(
+  {
+    revision: { type: Number, required: true },
+    at: { type: Date, required: true },
+    by: ref(),
+    reason: { type: String, required: true },
+    approvedBy: String,
+    changes: {
+      type: [
+        new Schema<IQuizCorrectionChange>(
+          { questionId: ref(), action: { type: String, enum: ['set_key', 'award_all'], required: true }, correctOptionId: String },
+          { _id: false },
+        ),
+      ],
+      required: true,
+    },
+  },
+  { _id: false },
+);
 
 const quizSchema = new Schema<IQuiz>(
   {
@@ -79,6 +118,10 @@ const quizSchema = new Schema<IQuiz>(
     codeSetAt: Date,
     resultVisibility: { type: String, enum: [...RESULT_VISIBILITIES], required: true, default: 'hidden' },
     resultsPublishedAt: Date,
+    resultsPublishedBy: Schema.Types.ObjectId,
+    passMarks: { type: Number, min: 0.01, max: 100000 },
+    gradingRevision: { type: Number, required: true, default: 0 },
+    corrections: { type: [correctionSchema], default: [] },
     status: { type: String, enum: [...QUIZ_STATUSES], required: true, default: 'draft' },
     revision: { type: Number, required: true, default: 1 },
     publishedAt: Date,

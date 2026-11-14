@@ -226,6 +226,7 @@ export class QuizService {
       endAt: input.endAt,
       durationMinutes: input.durationMinutes,
       maxAttempts: input.maxAttempts,
+      ...(input.passMarks !== undefined ? { passMarks: input.passMarks } : {}),
       accessMode: input.accessMode,
       ...(code ? { codeHash: code.codeHash, codeSetAt: code.codeSetAt } : {}),
       resultVisibility: input.resultVisibility,
@@ -275,6 +276,10 @@ export class QuizService {
       else set.durationMinutes = p.durationMinutes;
     }
     if (p.maxAttempts !== undefined) set.maxAttempts = p.maxAttempts;
+    if (p.passMarks !== undefined) {
+      if (p.passMarks === null) unset.passMarks = '';
+      else set.passMarks = p.passMarks;
+    }
     if (p.resultVisibility !== undefined) set.resultVisibility = p.resultVisibility;
     if (p.accessMode !== undefined) {
       set.accessMode = p.accessMode;
@@ -316,7 +321,9 @@ export class QuizService {
       const ok = await Question.countDocuments({ _id: { $in: ids }, collegeId: quiz.collegeId, createdBy: quiz.createdBy, subjectId: quiz.subjectId, status: 'active' });
       if (ok !== ids.length) problems.push({ path: 'items', message: `${ids.length - ok} question(s) were archived or are no longer available. Remove them and try again.` });
     }
-    if (!(roundMarks(quiz.items.reduce((s, i) => s + i.marks, 0)) > 0)) problems.push({ path: 'totalMarks', message: 'The total marks must be greater than 0.' });
+    const total = roundMarks(quiz.items.reduce((s, i) => s + i.marks, 0));
+    if (!(total > 0)) problems.push({ path: 'totalMarks', message: 'The total marks must be greater than 0.' });
+    if (quiz.passMarks !== undefined && quiz.passMarks > total) problems.push({ path: 'passMarks', message: 'The pass marks cannot be more than the total marks.' });
 
     if (!quiz.startAt) problems.push({ path: 'startAt', message: 'Set the start time.' });
     if (!quiz.endAt) problems.push({ path: 'endAt', message: 'Set the end time.' });

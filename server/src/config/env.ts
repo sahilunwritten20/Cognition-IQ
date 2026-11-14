@@ -1,6 +1,14 @@
 import { z } from 'zod';
 
 const boolString = z.enum(['true', 'false']).transform((v) => v === 'true');
+const isTimeZone = (tz: string) => {
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const schema = z
   .object({
@@ -28,6 +36,8 @@ const schema = z
     EXAM_GRACE_SECONDS: z.coerce.number().int().min(0).max(120).default(15),
     // Deadline sweeper: 'inline' runs it inside this API process; 'off' when a dedicated worker process runs it.
     SWEEPER: z.enum(['inline', 'off']).default('inline'),
+    // Times are STORED in UTC and shown/exported in this IANA time zone (guide Section 0).
+    DISPLAY_TIMEZONE: z.string().default('Asia/Kolkata').refine(isTimeZone, 'must be a valid IANA time zone, e.g. Asia/Kolkata'),
     COOKIE_SECURE: boolString.default('false'),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   })

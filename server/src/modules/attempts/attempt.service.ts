@@ -13,13 +13,22 @@ import { Quiz } from '../quizzes/quiz.model';
 import { evaluateAvailability, REASON_TEXT } from '../quizzes/quiz.rules';
 import { Attempt, COUNTED_STATUSES, type AttemptDoc, type IAttempt, type IAttemptQuestion } from './attempt.model';
 import type { SaveInput, SubmitInput } from './attempt.schemas';
-import { gradeAttempt } from './grading';
+import { applyCorrections, gradeAttempt, type QuizCorrection } from './grading';
 
 // Per-user limits on exam endpoints (never per IP: a whole classroom shares one NAT address). Starting values.
 const LIMITS = { start: 30, autosave: 90, submit: 30, read: 60 }; // requests per user per minute
 const CODE_FAILURES = 10; // wrong access codes per student per quiz per 15 minutes
 
 const iso = (d: Date) => d.toISOString();
+
+export const optionsOf = (a: AttemptDoc): Record<string, string[]> =>
+  Object.fromEntries(a.snapshot.questions.map((q): [string, string[]] => [q.questionId.toString(), q.options.map((o) => o.optionId)]));
+
+export const correctionsOf = (quiz: { corrections?: Array<{ revision: number; changes: Array<{ questionId: Types.ObjectId; action: 'set_key' | 'award_all'; correctOptionId?: string }> }> } | null): QuizCorrection[] =>
+  (quiz?.corrections ?? []).map((c) => ({
+    revision: c.revision,
+    changes: c.changes.map((ch) => ({ questionId: ch.questionId.toString(), action: ch.action, correctOptionId: ch.correctOptionId })),
+  }));
 
 export interface AttemptServiceDeps {
   store: CounterStore;
@@ -119,14 +128,28 @@ export class AttemptService {
     const a = await Attempt.findById(attemptId).select('+answerKey');
     if (!a || a.status === 'in_progress' || a.grading.status !== 'pending') return;
     try {
+      // The quiz's audited corrections apply to EVERY attempt, including ones graded late, so grading is always consistent.
+      const quiz = await Quiz.findById(a.quizId).select('corrections gradingRevision');
+      const effective = applyCorrections(a.answerKey ?? {}, optionsOf(a), correctionsOf(quiz));
       const result = gradeAttempt(
         a.snapshot.questions.map((q) => ({ questionId: q.questionId.toString(), marks: q.marks })),
-        a.answerKey ?? {},
+        effective.key,
         a.answers ?? {},
+        effective.awardAll,
       );
       await Attempt.updateOne(
         { _id: a._id, 'grading.status': 'pending' },
-        { $set: { 'grading.status': 'done', 'grading.score': result.score, 'grading.totalMarks': result.totalMarks, 'grading.revision': 1, 'grading.gradedAt': this.now(), 'grading.items': result.items } },
+        {
+          $set: {
+            'grading.status': 'done',
+            'grading.score': result.score,
+            'grading.totalMarks': result.totalMarks,
+            'grading.revision': 1,
+            'grading.quizRevision': quiz?.gradingRevision ?? 0,
+            'grading.gradedAt': this.now(),
+            'grading.items': result.items,
+          },
+        },
       );
     } catch (err) {
       // The submission is already durable. Mark the grading failed so it is visible and can be retried by a regrade.
@@ -322,6 +345,86 @@ export class AttemptService {
     // After the deadline + grace the request is NOT honoured: the server auto-submits with the last acknowledged answers.
     const done = await this.finalize(a._id, late ? 'auto_submitted' : 'submitted', now);
     return { ...this.finalDto(done ?? a, now), lateRejected: late };
+  }
+
+  // ------------------------------------------------------------------ regrade (audited key corrections, Runbook B)
+  /**
+   * Brings ONE finished attempt up to the quiz's latest correction revision. The previous grading is pushed onto
+   * `grading.history`, so the original and every corrected grade stay on record. Safe to repeat: it is conditional on the
+   * attempt's own grading revision, and an attempt already at the target revision is left alone.
+   */
+  async regradeAttempt(attemptId: Types.ObjectId, rev: number, corrections: QuizCorrection[]): Promise<'revised' | 'synced' | 'skipped'> {
+    const a = await Attempt.findById(attemptId).select('+answerKey');
+    if (!a || a.status === 'in_progress') return 'skipped';
+    if (a.grading.status === 'failed') {
+      await Attempt.updateOne({ _id: a._id, 'grading.status': 'failed' }, { $set: { 'grading.status': 'pending' } }); // regrade is the retry for failed grading
+      await this.grade(a._id);
+      return 'synced';
+    }
+    if (a.grading.status === 'pending') {
+      await this.grade(a._id); // grading already applies every correction
+      return 'synced';
+    }
+    if (a.grading.status !== 'done') return 'skipped';
+
+    const seen = a.grading.quizRevision ?? 0;
+    if (seen >= rev) return 'synced';
+    const touched = new Set(corrections.filter((c) => c.revision > seen).flatMap((c) => c.changes.map((ch) => ch.questionId)));
+    if (!a.snapshot.questions.some((q) => touched.has(q.questionId.toString()))) {
+      // The correction concerns questions this student never saw: nothing changes, only the revision marker advances.
+      await Attempt.updateOne({ _id: a._id, 'grading.status': 'done', 'grading.revision': a.grading.revision }, { $set: { 'grading.quizRevision': rev } });
+      return 'synced';
+    }
+
+    const effective = applyCorrections(a.answerKey ?? {}, optionsOf(a), corrections);
+    const result = gradeAttempt(
+      a.snapshot.questions.map((q) => ({ questionId: q.questionId.toString(), marks: q.marks })),
+      effective.key,
+      a.answers ?? {},
+      effective.awardAll,
+    );
+    const res = await Attempt.updateOne(
+      { _id: a._id, 'grading.status': 'done', 'grading.revision': a.grading.revision },
+      {
+        $push: { 'grading.history': { revision: a.grading.revision, quizRevision: seen, score: a.grading.score ?? 0, totalMarks: a.grading.totalMarks ?? 0, gradedAt: a.grading.gradedAt ?? this.now() } },
+        $set: {
+          'grading.score': result.score,
+          'grading.totalMarks': result.totalMarks,
+          'grading.items': result.items,
+          'grading.revision': a.grading.revision + 1,
+          'grading.quizRevision': rev,
+          'grading.gradedAt': this.now(),
+        },
+      },
+    );
+    return res.matchedCount === 1 ? 'revised' : 'skipped';
+  }
+
+  /** Regrades every finished attempt of a quiz that is behind the quiz's latest correction. Bounded rounds; safe to run again. */
+  async applyPendingCorrections(quizId: Types.ObjectId | string): Promise<{ processed: number; revised: number; skipped: number }> {
+    const stats = { processed: 0, revised: 0, skipped: 0 };
+    const quiz = await Quiz.findById(quizId).select('corrections gradingRevision');
+    if (!quiz) return stats;
+    const rev = quiz.gradingRevision;
+    const corrections = correctionsOf(quiz);
+    for (let round = 0; round < 1000; round++) {
+      const rows = await Attempt.find({
+        quizId: quiz._id,
+        status: { $in: COUNTED_STATUSES },
+        $or: [{ 'grading.quizRevision': { $lt: rev } }, { 'grading.quizRevision': { $exists: false } }],
+      }).limit(200).select('_id');
+      if (rows.length === 0) break;
+      let progress = 0;
+      for (const r of rows) {
+        const outcome = await this.regradeAttempt(r._id, rev, corrections);
+        stats.processed++;
+        if (outcome === 'revised') stats.revised++;
+        if (outcome === 'skipped') stats.skipped++;
+        else progress++;
+      }
+      if (progress === 0) break; // stuck attempts must not cause an endless loop
+    }
+    return stats;
   }
 
   // ------------------------------------------------------------------ background duties (sweeper, monitor, import pause)
