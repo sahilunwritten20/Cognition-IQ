@@ -144,7 +144,7 @@ export class AttemptService {
             'grading.status': 'done',
             'grading.score': result.score,
             'grading.totalMarks': result.totalMarks,
-            'grading.revision': 1,
+            'grading.revision': a.grading.revision + 1, // 1 for the first grade; +1 when a reopened attempt is graded again
             'grading.quizRevision': quiz?.gradingRevision ?? 0,
             'grading.gradedAt': this.now(),
             'grading.items': result.items,
@@ -246,6 +246,7 @@ export class AttemptService {
           answerKey,
           answers: {},
           lastSeq: 0,
+          lastActivityAt: now,
           startedAt: now,
           endsAt,
           grading: { status: 'pending', revision: 0 },
@@ -290,7 +291,7 @@ export class AttemptService {
     });
     if (problems.length > 0) throw Errors.validation(problems); // nothing is applied
 
-    const set: Record<string, unknown> = { lastSeq: seq };
+    const set: Record<string, unknown> = { lastSeq: seq, lastActivityAt: now };
     for (const an of answers) set[`answers.${an.questionId.toLowerCase()}`] = { selectedOptionId: an.selectedOptionId, savedAt: now }; // server time only
 
     // ONE conditional atomic update: owner, still in progress, deadline + grace not passed, and seq strictly newer.

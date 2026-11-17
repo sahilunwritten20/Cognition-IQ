@@ -27,5 +27,7 @@ const auditSchema = new Schema<IAuditLog>(
 );
 auditSchema.index({ collegeId: 1, at: -1 });
 auditSchema.index({ collegeId: 1, action: 1, at: -1 });
+auditSchema.index({ collegeId: 1, actorId: 1, at: -1 });
+auditSchema.index({ collegeId: 1, targetType: 1, targetId: 1, at: -1 });
 
 export const AuditLog = model<IAuditLog>('AuditLog', auditSchema);

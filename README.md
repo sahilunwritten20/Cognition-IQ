@@ -1,7 +1,7 @@
 # Cognition IQ
 
 Secure college-wide quiz and exam platform. See the Master Execution Guide v2.0 for the plan.
-Status: **Step 7 - results** (teachers see results, publish, regrade; students see released results).
+Status: **Step 8 - live monitor and recovery** (watch a live exam; extend, reopen, emergency close; audit viewer).
 
 ## Prerequisites
 Node 20+, Docker (for local MongoDB + Redis). The first `npm test` downloads a MongoDB binary
@@ -48,6 +48,9 @@ on the API. Imports automatically wait while an exam is running.
 Roster table, CSV, publication rules, the audited regrade and what students see: `docs/architecture/RESULTS.md`.
 Setting: `DISPLAY_TIMEZONE` (default Asia/Kolkata) for CSV times; stored times stay UTC.
 
+## Running a live exam
+`docs/architecture/MONITOR.md` (what each control does) and `docs/operations/RUNBOOK-exam-day.md` (what to do when). Setting: `MONITOR_STALL_SECONDS` (default 90).
+
 ## Checks (same as CI)
 ```bash
 npm run lint && npm run typecheck && npm test && npm run build
@@ -76,6 +79,10 @@ npm run lint && npm run typecheck && npm test && npm run build
 | Results (TEACHER own; HOD/SUPER_ADMIN read-only) | `GET /quizzes/:id/results`, `GET /quizzes/:id/results/export` (CSV) |
 | Results actions (TEACHER own) | `POST /quizzes/:id/{finalize-expired,results/publish,results/unpublish,results/visibility,regrade,regrade/resume}`, `GET /quizzes/:id/attempts/:attemptId` |
 | Released results (STUDENT) | `GET /student/results`, `GET /student/quizzes/:id/result` |
+
+| Live monitor (TEACHER own; HOD/SUPER_ADMIN read-only) | `GET /quizzes/:id/monitor` (poll every ~10 s; `?view=summary` for counts only) |
+| Recovery (TEACHER own; SUPER_ADMIN for the emergency ones) | `POST /quizzes/:id/extend`, `POST /quizzes/:id/emergency-close`, `POST /quizzes/:id/attempts/:attemptId/reopen` (teacher only) |
+| Audit log (SUPER_ADMIN, read-only) | `GET /audit` |
 
 Cookie-based endpoints need the header `X-Requested-With: cognition-iq` (CSRF defence).
 Errors use `{ error: { code, message, requestId, details? } }`.

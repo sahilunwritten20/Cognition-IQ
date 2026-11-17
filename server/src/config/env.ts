@@ -38,6 +38,8 @@ const schema = z
     SWEEPER: z.enum(['inline', 'off']).default('inline'),
     // Times are STORED in UTC and shown/exported in this IANA time zone (guide Section 0).
     DISPLAY_TIMEZONE: z.string().default('Asia/Kolkata').refine(isTimeZone, 'must be a valid IANA time zone, e.g. Asia/Kolkata'),
+    // Live monitor: an attempt with no accepted save for this long (while it still has time) is flagged "stalled".
+    MONITOR_STALL_SECONDS: z.coerce.number().int().min(15).max(900).default(90),
     COOKIE_SECURE: boolString.default('false'),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   })

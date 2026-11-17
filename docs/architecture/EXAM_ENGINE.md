@@ -58,5 +58,6 @@ and stays on the server: **students receive no score** from these endpoints. Sco
 endpoints (`docs/architecture/RESULTS.md`), after the teacher publishes. Grading always applies the quiz's audited key corrections.
 `grading.status`: `pending -> done` (or `failed`, logged, retried by regrade).
 
-## Not in this step
-Live monitor, extend time, reopen attempt and emergency close (next); per-student shuffle (R2).
+## Operating a live exam
+Watching and recovering a running exam (monitor, extend, reopen, emergency close): `docs/architecture/MONITOR.md` and the teacher's
+`docs/operations/RUNBOOK-exam-day.md`. Not in R1: per-student shuffle (R2).

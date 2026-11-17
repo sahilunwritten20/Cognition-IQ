@@ -11,7 +11,10 @@ import { AttemptService } from './attempts/attempt.service';
 import { createAttemptLookup } from './attempts/attempt.lookup';
 import { studentExamRouter } from './attempts/attempt.routes';
 import { AttemptSweeper } from './attempts/attempt.sweeper';
+import { AuditQueryService, auditRouter } from './audit/audit.query';
 import { AuditService } from './audit/audit.service';
+import { monitorRouter } from './monitor/monitor.routes';
+import { MonitorService } from './monitor/monitor.service';
 import { resultsRouter, studentResultsRouter } from './results/results.routes';
 import { ResultsService } from './results/results.service';
 import { AuthService } from './auth/auth.service';
@@ -41,6 +44,7 @@ export interface ApiConfig {
   importRetentionDays: number;
   examGraceSeconds: number;
   displayTimeZone: string;
+  monitorStallSeconds: number;
 }
 
 export const apiConfigFromEnv = (env: Env): ApiConfig => ({
@@ -55,6 +59,7 @@ export const apiConfigFromEnv = (env: Env): ApiConfig => ({
   importRetentionDays: env.IMPORT_RETENTION_DAYS,
   examGraceSeconds: env.EXAM_GRACE_SECONDS,
   displayTimeZone: env.DISPLAY_TIMEZONE,
+  monitorStallSeconds: env.MONITOR_STALL_SECONDS,
 });
 
 /** Composition root: builds services once and returns a function that mounts routers on /api/v1. */
@@ -99,6 +104,8 @@ export function createApiModules(
   });
   const sweeper = new AttemptSweeper({ attempts, logger: deps.logger, now });
   const results = new ResultsService({ audit, attempts, timeZone: cfg.displayTimeZone, now });
+  const monitor = new MonitorService({ audit, attempts, graceMs: cfg.examGraceSeconds * 1000, stallMs: cfg.monitorStallSeconds * 1000, now });
+  const auditQuery = new AuditQueryService();
   // Temporary import passwords are encrypted with a purpose-specific sub-key, never the master key.
   const credentialKey = deriveKey(cfg.twoFactorEncryptionKey, 'import-credentials-v1');
   const imports = new ImportService({ audit, credentialKey, retentionDays: cfg.importRetentionDays });
@@ -123,10 +130,12 @@ export function createApiModules(
     v1.use('/questions', questionRouter(questions, guards));
     v1.use('/quizzes', quizRouter(quizzes, guards));
     v1.use('/quizzes', resultsRouter(results, guards));
+    v1.use('/quizzes', monitorRouter(monitor, guards));
+    v1.use('/audit', auditRouter(auditQuery, guards));
     v1.use('/student/quizzes', studentQuizRouter(quizzes, guards));
     v1.use('/student', studentExamRouter(attempts, guards));
     v1.use('/student', studentResultsRouter(results, guards));
   };
 
-  return { mount, passwords, tokens, audit, auth, admin, academics, questions, quizzes, attempts, sweeper, results, imports, importWorker, guards, collegeId };
+  return { mount, passwords, tokens, audit, auth, admin, academics, questions, quizzes, attempts, sweeper, results, monitor, imports, importWorker, guards, collegeId };
 }

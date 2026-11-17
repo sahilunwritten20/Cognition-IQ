@@ -63,6 +63,13 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ ...valid, DISPLAY_TIMEZONE: 'Mars/Olympus' })).toThrow(/DISPLAY_TIMEZONE/);
   });
 
+  it('defaults the monitor stall threshold to 90 s and bounds it', () => {
+    expect(parseEnv(valid).MONITOR_STALL_SECONDS).toBe(90);
+    expect(parseEnv({ ...valid, MONITOR_STALL_SECONDS: '30' }).MONITOR_STALL_SECONDS).toBe(30);
+    expect(() => parseEnv({ ...valid, MONITOR_STALL_SECONDS: '5' })).toThrow(/MONITOR_STALL_SECONDS/);
+    expect(() => parseEnv({ ...valid, MONITOR_STALL_SECONDS: '901' })).toThrow(/MONITOR_STALL_SECONDS/);
+  });
+
   it('rejects a malformed college id and 2FA key', () => {
     expect(() => parseEnv({ ...valid, COLLEGE_ID: 'nope' })).toThrow(/COLLEGE_ID/);
     expect(() => parseEnv({ ...valid, TWO_FACTOR_ENCRYPTION_KEY: 'short' })).toThrow(/TWO_FACTOR_ENCRYPTION_KEY/);

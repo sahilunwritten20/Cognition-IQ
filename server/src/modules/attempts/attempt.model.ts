@@ -69,6 +69,8 @@ export interface IAttempt {
   /** questionId -> latest server-acknowledged answer. */
   answers: Record<string, IAttemptAnswer>;
   lastSeq: number; // highest accepted autosave sequence number
+  /** Server time of the last accepted save (or the start). The live monitor uses it to spot stalled students. */
+  lastActivityAt: Date;
   startedAt: Date;
   endsAt: Date; // authoritative deadline (server clock)
   submittedAt?: Date;
@@ -136,6 +138,7 @@ const attemptSchema = new Schema<IAttempt>(
     answerKey: { type: Schema.Types.Mixed, select: false },
     answers: { type: Schema.Types.Mixed, default: () => ({}) },
     lastSeq: { type: Number, required: true, default: 0 },
+    lastActivityAt: { type: Date, required: true, default: () => new Date() },
     startedAt: { type: Date, required: true },
     endsAt: { type: Date, required: true },
     submittedAt: Date,

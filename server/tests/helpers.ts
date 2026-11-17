@@ -38,6 +38,7 @@ export async function startTestApp(opts: { attempts?: AttemptLookup } = {}) {
     importRetentionDays: 30,
     examGraceSeconds: 15,
     displayTimeZone: 'Asia/Kolkata',
+    monitorStallSeconds: 90,
   };
   const clock = { now: Date.UTC(2026, 10, 6, 10, 0, 0) };
   const store = new MemoryCounterStore();
