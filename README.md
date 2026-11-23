@@ -1,7 +1,7 @@
 # Cognition IQ
 
 Secure college-wide quiz and exam platform. See the Master Execution Guide v2.0 for the plan.
-Status: **Step 8 - live monitor and recovery** (watch a live exam; extend, reopen, emergency close; audit viewer).
+Status: **Step 9 - security and integration gate** (deny-by-default sweeps over every route; the whole college flow end to end).
 
 ## Prerequisites
 Node 20+, Docker (for local MongoDB + Redis). The first `npm test` downloads a MongoDB binary
@@ -50,6 +50,10 @@ Setting: `DISPLAY_TIMEZONE` (default Asia/Kolkata) for CSV times; stored times s
 
 ## Running a live exam
 `docs/architecture/MONITOR.md` (what each control does) and `docs/operations/RUNBOOK-exam-day.md` (what to do when). Setting: `MONITOR_STALL_SECONDS` (default 90).
+
+## Security
+What is verified by tests, what CI enforces, and what is still OPEN (pen test, privacy review, hosting hardening, web app review):
+`docs/security/SECURITY_REVIEW.md`. CI also runs dependency audit and secret scanning (`.github/workflows/security.yml`).
 
 ## Checks (same as CI)
 ```bash
