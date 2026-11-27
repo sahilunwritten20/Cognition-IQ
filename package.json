@@ -11,5 +11,5 @@
     "build": "npm run build -w server && npm run build -w client",
     "format": "prettier --write ."
   },
-  "devDependencies": { "prettier": "^3.3.3" }
+  "devDependencies": { "prettier": "^3.10.1" }
 }
