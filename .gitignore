@@ -1,8 +1,12 @@
 node_modules
 dist
 .env
-.env.example
 .env.*
 !.env.example
+.env.example
 coverage
 *.log
+load/data/
+load/results/
+docs/operations/restore-drills/*.md
+!docs/operations/restore-drills/TEMPLATE.md

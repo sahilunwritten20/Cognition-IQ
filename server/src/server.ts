@@ -13,7 +13,10 @@ async function main() {
   const env = parseEnv(process.env); // throws => process exits (fail fast)
   const logger = createLogger(env.LOG_LEVEL);
 
-  await connectDatabase(env.MONGODB_URI);
+  await connectDatabase(env.MONGODB_URI, env.MONGODB_MAX_POOL_SIZE);
+  if (env.LOAD_TEST_MODE) {
+    logger.warn('LOAD_TEST_MODE is ON: per-IP login/registration limits are relaxed. Never run like this outside a test environment.');
+  }
   const activeAdmins = await User.countDocuments({
     collegeId: new Types.ObjectId(env.COLLEGE_ID),
     role: 'SUPER_ADMIN',

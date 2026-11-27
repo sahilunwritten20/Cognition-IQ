@@ -1,7 +1,7 @@
 # Cognition IQ
 
 Secure college-wide quiz and exam platform. See the Master Execution Guide v2.0 for the plan.
-Status: **Step 9 - security and integration gate** (deny-by-default sweeps over every route; the whole college flow end to end).
+Status: **Step 10 - load testing and recovery drills** (k6 scenarios, answer-durability verifier, backup/restore integrity check).
 
 ## Prerequisites
 Node 20+, Docker (for local MongoDB + Redis). The first `npm test` downloads a MongoDB binary
@@ -54,6 +54,10 @@ Setting: `DISPLAY_TIMEZONE` (default Asia/Kolkata) for CSV times; stored times s
 ## Security
 What is verified by tests, what CI enforces, and what is still OPEN (pen test, privacy review, hosting hardening, web app review):
 `docs/security/SECURITY_REVIEW.md`. CI also runs dependency audit and secret scanning (`.github/workflows/security.yml`).
+
+## Load testing and backups
+Run the load scenarios on staging and prove no acknowledged answer is lost: `docs/operations/LOAD_TESTING.md` (k6 scripts in `load/k6`).
+Backups and the restore drill with measured RPO/RTO: `docs/operations/BACKUP_RESTORE.md`. Report templates are next to them.
 
 ## Checks (same as CI)
 ```bash

@@ -40,6 +40,11 @@ const schema = z
     DISPLAY_TIMEZONE: z.string().default('Asia/Kolkata').refine(isTimeZone, 'must be a valid IANA time zone, e.g. Asia/Kolkata'),
     // Live monitor: an attempt with no accepted save for this long (while it still has time) is flagged "stalled".
     MONITOR_STALL_SECONDS: z.coerce.number().int().min(15).max(900).default(90),
+    // Load testing only: relaxes the PER-IP login/registration limits, because one load generator looks like one IP.
+    // Per-user limits (exam endpoints, 2FA, access codes) are NOT relaxed. Refused in production.
+    LOAD_TEST_MODE: boolString.default('false'),
+    // MongoDB connection pool per process. Raise only if the load test shows queueing for connections.
+    MONGODB_MAX_POOL_SIZE: z.coerce.number().int().min(5).max(500).default(100),
     COOKIE_SECURE: boolString.default('false'),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   })
@@ -49,6 +54,9 @@ const schema = z
     }
     if ((e.NODE_ENV === 'production' || e.NODE_ENV === 'staging') && !e.CLIENT_ORIGIN.startsWith('https://')) {
       ctx.addIssue({ code: 'custom', message: 'must use https outside development', path: ['CLIENT_ORIGIN'] });
+    }
+    if (e.NODE_ENV === 'production' && e.LOAD_TEST_MODE) {
+      ctx.addIssue({ code: 'custom', message: 'must be false in production', path: ['LOAD_TEST_MODE'] });
     }
     if ((e.NODE_ENV === 'production' || e.NODE_ENV === 'staging') && !e.COOKIE_SECURE) {
       ctx.addIssue({ code: 'custom', message: 'must be true outside development', path: ['COOKIE_SECURE'] });

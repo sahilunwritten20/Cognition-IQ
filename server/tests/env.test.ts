@@ -70,6 +70,15 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ ...valid, MONITOR_STALL_SECONDS: '901' })).toThrow(/MONITOR_STALL_SECONDS/);
   });
 
+  it('LOAD_TEST_MODE defaults off and is refused in production; the pool size is bounded', () => {
+    expect(parseEnv(valid).LOAD_TEST_MODE).toBe(false);
+    expect(parseEnv({ ...valid, NODE_ENV: 'staging', COOKIE_SECURE: 'true', CLIENT_ORIGIN: 'https://staging.college.edu', LOAD_TEST_MODE: 'true' }).LOAD_TEST_MODE).toBe(true);
+    expect(() => parseEnv({ ...valid, NODE_ENV: 'production', COOKIE_SECURE: 'true', CLIENT_ORIGIN: 'https://app.college.edu', LOAD_TEST_MODE: 'true' })).toThrow(/LOAD_TEST_MODE/);
+    expect(parseEnv(valid).MONGODB_MAX_POOL_SIZE).toBe(100);
+    expect(() => parseEnv({ ...valid, MONGODB_MAX_POOL_SIZE: '2' })).toThrow(/MONGODB_MAX_POOL_SIZE/);
+    expect(() => parseEnv({ ...valid, MONGODB_MAX_POOL_SIZE: '501' })).toThrow(/MONGODB_MAX_POOL_SIZE/);
+  });
+
   it('rejects a malformed college id and 2FA key', () => {
     expect(() => parseEnv({ ...valid, COLLEGE_ID: 'nope' })).toThrow(/COLLEGE_ID/);
     expect(() => parseEnv({ ...valid, TWO_FACTOR_ENCRYPTION_KEY: 'short' })).toThrow(/TWO_FACTOR_ENCRYPTION_KEY/);

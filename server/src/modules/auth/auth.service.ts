@@ -52,6 +52,8 @@ export interface AuthDeps {
   refreshTtlMs: number;
   twoFactorKey: string;
   now?: () => number; // injectable clock (TOTP tests)
+  /** Load-test environments only: lifts the per-IP limits (a load generator is one IP). Per-account and per-user limits stay. */
+  relaxIpLimits?: boolean;
 }
 
 const isDuplicateKey = (err: unknown): boolean =>
@@ -75,7 +77,7 @@ export class AuthService {
   // ---------------------------------------------------------------- registration
   /** Students only; always creates a PENDING account. Same outcome whether or not the ID exists. */
   async register(input: { name: string; loginId: string; password: string }, meta: RequestMeta): Promise<void> {
-    await this.hit(`register:ip:${meta.ip ?? 'unknown'}`, LIMITS.registerPerIp, 3600);
+    await this.hit(`register:ip:${meta.ip ?? 'unknown'}`, this.d.relaxIpLimits ? Number.MAX_SAFE_INTEGER : LIMITS.registerPerIp, 3600);
     const passwordHash = await this.d.passwords.hash(input.password); // hash first: equal timing
     try {
       const user = await User.create({
@@ -103,7 +105,7 @@ export class AuthService {
 
   // ---------------------------------------------------------------- login
   async login(input: { loginId: string; password: string }, meta: RequestMeta): Promise<LoginResult> {
-    await this.hit(`login:ip:${meta.ip ?? 'unknown'}`, LIMITS.loginPerIp, MIN_15);
+    await this.hit(`login:ip:${meta.ip ?? 'unknown'}`, this.d.relaxIpLimits ? Number.MAX_SAFE_INTEGER : LIMITS.loginPerIp, MIN_15);
     const acctKey = `login:acct:${input.loginId}`;
     await this.assertBelow(acctKey, LIMITS.loginPerAccount);
 

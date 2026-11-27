@@ -21,7 +21,7 @@ export const CSRF = { 'X-Requested-With': 'cognition-iq', Origin: CLIENT_ORIGIN 
 
 export type TestCtx = Awaited<ReturnType<typeof startTestApp>>;
 
-export async function startTestApp(opts: { attempts?: AttemptLookup } = {}) {
+export async function startTestApp(opts: { attempts?: AttemptLookup; cfg?: Partial<ApiConfig> } = {}) {
   const mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri());
   await Promise.all([User.init(), RefreshSession.init(), AuditLog.init(), initAcademicIndexes(), initImportIndexes(), initQuestionIndexes(), initQuizIndexes(), initAttemptIndexes()]);
@@ -39,6 +39,8 @@ export async function startTestApp(opts: { attempts?: AttemptLookup } = {}) {
     examGraceSeconds: 15,
     displayTimeZone: 'Asia/Kolkata',
     monitorStallSeconds: 90,
+    loadTestMode: false,
+    ...opts.cfg,
   };
   const clock = { now: Date.UTC(2026, 10, 6, 10, 0, 0) };
   const store = new MemoryCounterStore();

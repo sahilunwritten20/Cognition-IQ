@@ -45,6 +45,7 @@ export interface ApiConfig {
   examGraceSeconds: number;
   displayTimeZone: string;
   monitorStallSeconds: number;
+  loadTestMode: boolean;
 }
 
 export const apiConfigFromEnv = (env: Env): ApiConfig => ({
@@ -60,6 +61,7 @@ export const apiConfigFromEnv = (env: Env): ApiConfig => ({
   examGraceSeconds: env.EXAM_GRACE_SECONDS,
   displayTimeZone: env.DISPLAY_TIMEZONE,
   monitorStallSeconds: env.MONITOR_STALL_SECONDS,
+  loadTestMode: env.LOAD_TEST_MODE,
 });
 
 /** Composition root: builds services once and returns a function that mounts routers on /api/v1. */
@@ -82,6 +84,7 @@ export function createApiModules(
     refreshTtlMs,
     twoFactorKey: cfg.twoFactorEncryptionKey,
     now: deps.now,
+    relaxIpLimits: cfg.loadTestMode,
   });
   const admin = new UserAdminService({ collegeId, passwords, audit });
   const academics = new AcademicsService(audit);

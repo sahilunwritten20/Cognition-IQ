@@ -14,7 +14,7 @@ import { apiConfigFromEnv, createApiModules } from './modules';
 async function main() {
   const env = parseEnv(process.env); // fail fast
   const logger = createLogger(env.LOG_LEVEL);
-  await connectDatabase(env.MONGODB_URI);
+  await connectDatabase(env.MONGODB_URI, env.MONGODB_MAX_POOL_SIZE);
 
   // The worker needs no Redis: the (unused here) rate-limit store is a throwaway in-memory one.
   const modules = createApiModules(apiConfigFromEnv(env), { logger, store: new MemoryCounterStore() });

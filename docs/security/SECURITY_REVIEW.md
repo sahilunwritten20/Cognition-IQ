@@ -41,7 +41,7 @@ evidence exists and a human reviewer has signed it.
    CSP for the client origin, dependency review of the front end, Playwright end-to-end tests, accessibility checks.
 7. **Monitoring and alerting** for SEV-1/SEV-2 conditions (failed grading, sweeper not running, error rate, Redis/Mongo health).
 8. **Operations**: two SUPER_ADMIN accounts, the recovery runbook rehearsed, named incident contacts, deployment freeze during exams.
-9. **Load and recovery testing** (Phase 12): k6 scenarios at 100/500/1,000/1,500 users, restart and failure tests.
+9. **Load and recovery testing** (Phase 12): the k6 scripts, verifier and restore check exist (`docs/operations/LOAD_TESTING.md`, `BACKUP_RESTORE.md`); **the measured results are still OPEN**: run them on staging and fill in the report.
 
 ## Known accepted risks (recorded, not hidden)
 - Any SUPER_ADMIN can reset another SUPER_ADMIN's credentials (needed for recovery); mitigated by mandatory reasons and audit.

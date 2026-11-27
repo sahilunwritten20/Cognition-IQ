@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
 
-export async function connectDatabase(uri: string): Promise<void> {
+export async function connectDatabase(uri: string, maxPoolSize = 100): Promise<void> {
   mongoose.set('strictQuery', true);
-  await mongoose.connect(uri, { serverSelectionTimeoutMS: 10_000 });
+  await mongoose.connect(uri, { serverSelectionTimeoutMS: 10_000, maxPoolSize });
 }
 
 export async function disconnectDatabase(): Promise<void> {
